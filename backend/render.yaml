@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: campus-pass-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
+    plan: free
+    # The root directory for the backend code
+    repo: .
