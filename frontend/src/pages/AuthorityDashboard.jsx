@@ -1,94 +1,271 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  CheckCircle, XCircle, Clock, ChevronDown, ChevronUp,
+  User, CalendarDays, FileText, MessageSquare, Building
+} from 'lucide-react';
+import { API_URL, getToken, getStoredUser } from '../utils/auth';
+import { toastSuccess, toastError } from '../components/Toast';
+
+const TYPE_COLORS = {
+  'Leave':       'rgba(108,99,255,0.15)',
+  'On-Duty':     'rgba(56,189,248,0.15)',
+  'Hostel Exit': 'rgba(245,158,11,0.15)',
+  'Medical':     'rgba(16,185,129,0.15)',
+};
+
+const TYPE_ICONS = {
+  'Leave':       '🏖️',
+  'On-Duty':     '💼',
+  'Hostel Exit': '🏠',
+  'Medical':     '🏥',
+};
 
 function AuthorityDashboard() {
-  const [requests, setRequests] = useState([]);
-  const [comment, setComment] = useState('');
-  const [activeRequest, setActiveRequest] = useState(null);
+  const [requests,    setRequests]   = useState([]);
+  const [loading,     setLoading]    = useState(true);
+  const [activeId,    setActiveId]   = useState(null);
+  const [comment,     setComment]    = useState('');
+  const [acting,      setActing]     = useState(false);
   const navigate = useNavigate();
+  const user = getStoredUser();
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  useEffect(() => { fetchRequests(); }, []);
 
   const fetchRequests = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return navigate('/login');
-
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const res = await fetch(`${API_URL}/api/permissions/pending`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (res.ok) {
-      setRequests(await res.json());
+    const token = getToken();
+    if (!token) { navigate('/login'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/permissions/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setRequests(await res.json());
+      else if (res.status === 401) navigate('/login');
+    } catch {
+      toastError('Error', 'Failed to load pending requests.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAction = async (id, action) => {
-    const token = localStorage.getItem('token');
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const res = await fetch(`${API_URL}/api/permissions/${id}/action`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ action, comment })
-    });
+    const token = getToken();
+    if (!token) { navigate('/login'); return; }
 
-    if (res.ok) {
-      alert(`Request ${action}!`);
-      setComment('');
-      setActiveRequest(null);
-      fetchRequests();
-    } else {
-      alert('Action failed');
+    setActing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/permissions/${id}/action`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action, comment }),
+      });
+
+      if (res.ok) {
+        toastSuccess(
+          action === 'Approved' ? '✅ Request Approved' : '❌ Request Rejected',
+          action === 'Approved'
+            ? 'The student will be notified of the approval.'
+            : 'The request has been rejected.'
+        );
+        setComment('');
+        setActiveId(null);
+        fetchRequests();
+      } else {
+        toastError('Action Failed', 'Could not process the request. Try again.');
+      }
+    } catch {
+      toastError('Error', 'A network error occurred.');
+    } finally {
+      setActing(false);
     }
   };
 
-  return (
-    <div style={{ marginTop: '40px' }}>
-      <h2 style={{ marginBottom: '24px' }}>Pending Approvals</h2>
+  /* Stats */
+  const stats = {
+    pending:  requests.length,
+    role:     user?.role || 'Authority',
+    dept:     user?.department || '',
+  };
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {requests.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No pending requests for your approval.</p>
-        ) : (
-          requests.map(req => (
-            <div key={req._id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h4 style={{ marginBottom: '4px', fontSize: '1.1rem' }}>{req.student.name} ({req.student.rollNumber})</h4>
-                  <p style={{ color: 'var(--primary-color)', fontWeight: '500', marginBottom: '8px' }}>{req.type}</p>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Dates: {new Date(req.fromDate).toLocaleDateString()} to {new Date(req.toDate).toLocaleDateString()}</p>
-                  <p style={{ marginTop: '12px' }}><strong>Reason:</strong> {req.reason}</p>
+  return (
+    <div className="animate-fade-in">
+
+      {/* ── Header ── */}
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">Pending Approvals</h2>
+          <p className="page-subtitle">
+            Logged in as{' '}
+            <span className="badge badge-role" style={{ fontSize: '0.78rem' }}>{stats.role}</span>
+            {stats.dept && <span style={{ marginLeft: '8px', color: 'var(--text-muted)' }}>• {stats.dept}</span>}
+          </p>
+        </div>
+        <div className="stat-card" style={{ padding: '14px 22px', flexDirection: 'row', gap: '14px', alignItems: 'center', margin: 0 }}>
+          <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.15)', fontSize: '1.2rem', flexShrink: 0 }}>⏳</div>
+          <div>
+            <div className="stat-number" style={{ fontSize: '1.6rem' }}>{stats.pending}</div>
+            <div className="stat-label">Awaiting Review</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+          <div className="spinner" style={{ margin: '0 auto 12px', borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
+          Loading pending requests…
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🎉</div>
+          <h3>All Clear!</h3>
+          <p>No pending requests for your approval right now.</p>
+        </div>
+      ) : (
+        <div className="request-list">
+          {requests.map((req) => {
+            const isExpanded = activeId === req._id;
+            return (
+              <div
+                key={req._id}
+                className="card"
+                style={{ padding: '0', overflow: 'hidden' }}
+              >
+                {/* Top color accent */}
+                <div style={{
+                  height: '3px',
+                  background: `linear-gradient(90deg, var(--primary), var(--accent))`,
+                }} />
+
+                <div style={{ padding: '22px 24px' }}>
+                  {/* Header Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1 }}>
+                      {/* Student Info */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <div style={{
+                          width: '38px', height: '38px', borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.9rem', fontWeight: '700', color: '#fff', flexShrink: 0,
+                        }}>
+                          {req.student?.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '1rem' }}>
+                            {req.student?.name || 'Unknown Student'}
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {req.student?.rollNumber && (
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                <strong>Roll:</strong> {req.student.rollNumber}
+                              </span>
+                            )}
+                            {req.student?.department && (
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                <Building size={10} style={{ display: 'inline', marginRight: '3px' }} />
+                                {req.student.department}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Request Details */}
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          padding: '5px 12px', borderRadius: 'var(--r-full)',
+                          background: TYPE_COLORS[req.type] || 'var(--bg-card)',
+                          fontSize: '0.85rem', fontWeight: '600',
+                        }}>
+                          {TYPE_ICONS[req.type] || '📄'} {req.type}
+                        </span>
+                        <span style={{ fontSize: '0.83rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <CalendarDays size={13} />
+                          {new Date(req.fromDate).toLocaleDateString('en-IN')} → {new Date(req.toDate).toLocaleDateString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div style={{ marginTop: '12px', fontSize: '0.9rem', color: 'var(--text-sub)', lineHeight: 1.6 }}>
+                        <strong style={{ color: 'var(--text-main)' }}>Reason: </strong>
+                        {req.reason}
+                      </div>
+                    </div>
+
+                    {/* Action Toggle */}
+                    <button
+                      id={`review-btn-${req._id}`}
+                      className={isExpanded ? 'btn-secondary' : 'btn-primary'}
+                      onClick={() => { setActiveId(isExpanded ? null : req._id); setComment(''); }}
+                      style={{ flexShrink: 0 }}
+                    >
+                      {isExpanded ? <><ChevronUp size={15} /> Close</> : <><ChevronDown size={15} /> Review</>}
+                    </button>
+                  </div>
+
+                  {/* Expanded Action Panel */}
+                  {isExpanded && (
+                    <div
+                      className="animate-fade-in"
+                      style={{
+                        marginTop: '20px',
+                        padding: '18px',
+                        background: 'var(--bg-input)',
+                        borderRadius: 'var(--r-md)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      <div className="form-group" style={{ marginBottom: '14px' }}>
+                        <label className="form-label">
+                          <MessageSquare size={12} style={{ display: 'inline', marginRight: '5px' }} />
+                          Remark (optional)
+                        </label>
+                        <textarea
+                          className="form-textarea"
+                          style={{ minHeight: '70px' }}
+                          placeholder="Add a remark for the student (optional)…"
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          id={`remark-${req._id}`}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                          id={`approve-btn-${req._id}`}
+                          className="btn-primary btn-success"
+                          onClick={() => handleAction(req._id, 'Approved')}
+                          disabled={acting}
+                        >
+                          {acting ? <div className="spinner" /> : <CheckCircle size={15} />}
+                          Approve
+                        </button>
+                        <button
+                          id={`reject-btn-${req._id}`}
+                          className="btn-primary btn-danger"
+                          onClick={() => handleAction(req._id, 'Rejected')}
+                          disabled={acting}
+                        >
+                          {acting ? <div className="spinner" /> : <XCircle size={15} />}
+                          Reject
+                        </button>
+                        <button
+                          className="btn-secondary"
+                          onClick={() => { setActiveId(null); setComment(''); }}
+                          disabled={acting}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {activeRequest === req._id ? (
-                <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>
-                  <textarea 
-                    placeholder="Add a remark (optional)..."
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                    rows="2"
-                    style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', marginBottom: '12px' }}
-                  />
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn-primary" style={{ background: 'var(--success)' }} onClick={() => handleAction(req._id, 'Approved')}>Approve</button>
-                    <button className="btn-primary" style={{ background: 'var(--danger)' }} onClick={() => handleAction(req._id, 'Rejected')}>Reject</button>
-                    <button className="btn-secondary" onClick={() => setActiveRequest(null)}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ marginTop: '8px' }}>
-                  <button className="btn-primary" onClick={() => setActiveRequest(req._id)}>Review Request</button>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

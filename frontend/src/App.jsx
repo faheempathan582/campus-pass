@@ -1,68 +1,178 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import './App.css'; // This is empty now
-import { GraduationCap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
+import './App.css';
+import { GraduationCap, LogOut, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
 import AuthorityDashboard from './pages/AuthorityDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import GuestRoute from './components/GuestRoute';
+import NotificationBell from './components/NotificationBell';
+import { ToastContainer } from './components/Toast';
+import { getStoredUser, logout, getDashboardPath, isAuthority } from './utils/auth';
 
+/* ── Navbar ─────────────────────────────────────────────── */
+function Navbar() {
+  const [user, setUser] = useState(getStoredUser());
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const sync = () => setUser(getStoredUser());
+    window.addEventListener('auth-change', sync);
+    return () => window.removeEventListener('auth-change', sync);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  return (
+    <nav className="navbar">
+      <div className="container nav-content">
+        {/* Brand */}
+        <Link to={user ? getDashboardPath(user.role) : '/'} className="brand">
+          <div className="brand-icon">
+            <GraduationCap size={20} color="#fff" strokeWidth={2.5} />
+          </div>
+          <h1>CampusPass</h1>
+        </Link>
+
+        {/* Right Side */}
+        <div className="nav-links">
+          {user ? (
+            <div className="nav-user-info">
+              {/* Notification Bell — only for authorities */}
+              {isAuthority(user.role) && <NotificationBell />}
+
+              {/* Dashboard shortcut */}
+              <Link to={getDashboardPath(user.role)} className="btn-ghost" title="Dashboard">
+                <LayoutDashboard size={17} />
+                <span style={{ display: 'none' }}>Dashboard</span>
+              </Link>
+
+              {/* User chip */}
+              <div className="nav-user-chip">
+                <div className="nav-avatar">
+                  {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                </div>
+                <span>{user.name?.split(' ')[0] || user.email}</span>
+                <span className="badge badge-role" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                  {user.role}
+                </span>
+              </div>
+
+              {/* Logout */}
+              <button onClick={handleLogout} className="btn-logout" title="Logout">
+                <LogOut size={15} />
+                Logout
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="btn-secondary">Login</Link>
+              <Link to="/register" className="btn-primary">
+                <ShieldCheck size={15} />
+                Register
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+/* ── App ─────────────────────────────────────────────────── */
 function App() {
   return (
     <BrowserRouter>
       <div className="app-container">
-        {/* Navigation Bar */}
-        <nav className="navbar">
-          <div className="container nav-content">
-            <div className="brand">
-              <GraduationCap size={32} color="var(--primary-color)" />
-              <h1>CampusPass</h1>
-            </div>
-            <div className="nav-links">
-              <Link to="/login" className="btn-secondary">Login</Link>
-            </div>
-          </div>
-        </nav>
+        <Navbar />
 
-        {/* Main Content Area */}
-        <main className="container animate-fade-in" style={{ marginTop: '40px' }}>
+        <main className="container animate-fade-in" style={{ marginTop: '32px' }}>
           <Routes>
+            {/* Public Home */}
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/student-dashboard" element={<StudentDashboard />} />
-            <Route path="/authority-dashboard" element={<AuthorityDashboard />} />
-            {/* Add more routes here later */}
+
+            {/* Guest-only (redirect logged-in users) */}
+            <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
+            <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+
+            {/* Protected — Student only */}
+            <Route
+              path="/student-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['Student']}>
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected — Authority roles only */}
+            <Route
+              path="/authority-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['Advisor', 'HOD', 'Warden', 'Principal']}>
+                  <AuthorityDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+
+        {/* Global Toast Notifications */}
+        <ToastContainer />
       </div>
     </BrowserRouter>
   );
 }
 
-// Temporary Home Component
+/* ── Home Page ───────────────────────────────────────────── */
 function Home() {
+  const user = getStoredUser();
   return (
-    <div className="hero-section text-center">
-      <h2 style={{ fontSize: '2.5rem', marginBottom: '16px', color: 'var(--text-main)' }}>
-        Digital Permissions, Simplified.
-      </h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', marginBottom: '32px' }}>
-        Apply for leaves, on-duty, and hostel exits in seconds.
+    <div className="hero-section">
+      <h2>Digital Permissions,<br />Simplified.</h2>
+      <p>
+        Apply for leaves, on-duty, and hostel exits — entirely online.
+        No paperwork, no chasing faculty. Just your SRIT email.
       </p>
-      <Link to="/register" className="btn-primary" style={{ fontSize: '1.1rem', padding: '12px 24px' }}>
-        Get Started
-      </Link>
+      {user ? (
+        <Link to={getDashboardPath(user.role)} className="btn-primary" style={{ fontSize: '1rem', padding: '14px 32px' }}>
+          Go to Dashboard
+        </Link>
+      ) : (
+        <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link to="/register" className="btn-primary" style={{ fontSize: '1rem', padding: '14px 32px' }}>
+            <ShieldCheck size={18} /> Get Started
+          </Link>
+          <Link to="/login" className="btn-secondary" style={{ fontSize: '1rem', padding: '14px 28px' }}>
+            Login
+          </Link>
+        </div>
+      )}
 
-      <div style={{ marginTop: '60px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-         <div className="card text-left">
-            <h3 style={{ marginBottom: '8px' }}>For Students</h3>
-            <p style={{ color: 'var(--text-muted)' }}>Apply for permissions from anywhere without chasing faculty.</p>
-         </div>
-         <div className="card text-left">
-            <h3 style={{ marginBottom: '8px' }}>For Faculty</h3>
-            <p style={{ color: 'var(--text-muted)' }}>Review and approve requests digitally with a complete audit trail.</p>
-         </div>
+      <div className="hero-cards">
+        <div className="hero-feature-card">
+          <div className="hero-feature-icon">🎓</div>
+          <h3>For Students</h3>
+          <p>Apply for leave, on-duty, medical, or hostel exit permissions from anywhere — no more running after faculty.</p>
+        </div>
+        <div className="hero-feature-card">
+          <div className="hero-feature-icon">🔔</div>
+          <h3>For Advisors & HOD</h3>
+          <p>Get instant notifications when students apply. Review and approve requests digitally with a full audit trail.</p>
+        </div>
+        <div className="hero-feature-card">
+          <div className="hero-feature-icon">🔒</div>
+          <h3>Secured by Design</h3>
+          <p>Only <strong>@srit.ac.in</strong> email addresses are allowed. All routes are protected and verified via JWT.</p>
+        </div>
       </div>
     </div>
   );

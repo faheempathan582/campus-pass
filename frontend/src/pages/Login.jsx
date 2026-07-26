@@ -1,66 +1,169 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { GraduationCap, Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
+import { isValidCollegeEmail, setAuth, API_URL, ALLOWED_DOMAIN } from '../utils/auth';
+import { toastSuccess, toastError } from '../components/Toast';
 
 function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]         = useState('');
+  const [password, setPassword]   = useState('');
+  const [showPass, setShowPass]   = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [emailError, setEmailErr] = useState('');
   const navigate = useNavigate();
+
+  /* Live email validation */
+  const handleEmailChange = (val) => {
+    setEmail(val);
+    if (val && !val.endsWith(ALLOWED_DOMAIN)) {
+      setEmailErr(`Only ${ALLOWED_DOMAIN} emails are allowed`);
+    } else {
+      setEmailErr('');
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    /* Frontend guard */
+    if (!isValidCollegeEmail(email)) {
+      setEmailErr(`Only ${ALLOWED_DOMAIN} emails are allowed`);
+      return;
+    }
+
+    setLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       const data = await res.json();
+
       if (res.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        if (data.user.role === 'Student') {
-          navigate('/student-dashboard');
-        } else {
-          navigate('/authority-dashboard');
-        }
+        setAuth(data.token, data.user);
+        toastSuccess('Welcome back!', `Logged in as ${data.user.name}`);
+        navigate(data.user.role === 'Student' ? '/student-dashboard' : '/authority-dashboard');
       } else {
-        alert(data.message || 'Login failed');
+        toastError('Login Failed', data.message || 'Invalid credentials');
       }
-    } catch (err) {
-      alert('Error connecting to server');
+    } catch {
+      toastError('Connection Error', 'Unable to reach the server. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', marginTop: '60px' }}>
-      <div className="card">
-        <h2 style={{ textAlign: 'center', marginBottom: '24px', color: 'var(--primary-color)' }}>Welcome Back</h2>
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Email</label>
-            <input 
-              type="email" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-              required
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
-            />
+    <div className="auth-page">
+      <div className="auth-card">
+
+        {/* Logo */}
+        <div className="auth-logo">
+          <div className="auth-logo-icon">
+            <GraduationCap size={28} color="#fff" strokeWidth={2} />
           </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Password</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required
-              style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
-            />
+        </div>
+
+        {/* Heading */}
+        <div className="auth-heading">
+          <h2>Welcome Back</h2>
+          <p>Sign in to your CampusPass account</p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+          {/* Email */}
+          <div className="form-group">
+            <label className="form-label">College Email</label>
+            <div style={{ position: 'relative' }}>
+              <Mail
+                size={16}
+                style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
+              />
+              <input
+                id="login-email"
+                type="email"
+                className={`form-input${emailError ? ' error' : ''}`}
+                style={{ paddingLeft: '42px' }}
+                value={email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                placeholder={`yourrollno${ALLOWED_DOMAIN}`}
+                required
+                autoComplete="email"
+              />
+            </div>
+            {emailError && (
+              <span className="form-error">
+                <AlertCircle size={12} /> {emailError}
+              </span>
+            )}
+            {!emailError && (
+              <span className="form-hint">Must be an @srit.ac.in address</span>
+            )}
           </div>
-          <button type="submit" className="btn-primary" style={{ marginTop: '8px' }}>Login</button>
+
+          {/* Password */}
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock
+                size={16}
+                style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
+              />
+              <input
+                id="login-password"
+                type={showPass ? 'text' : 'password'}
+                className="form-input"
+                style={{ paddingLeft: '42px', paddingRight: '42px' }}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                style={{
+                  position: 'absolute', right: '12px', top: '50%',
+                  transform: 'translateY(-50%)', color: 'var(--text-muted)',
+                  padding: '4px', borderRadius: '4px',
+                }}
+                aria-label="Toggle password visibility"
+              >
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button
+            id="login-submit"
+            type="submit"
+            className="btn-primary"
+            style={{ width: '100%', padding: '13px', marginTop: '4px', fontSize: '1rem' }}
+            disabled={loading || !!emailError}
+          >
+            {loading ? (
+              <><div className="spinner" /> Signing in…</>
+            ) : (
+              <><ShieldCheck size={17} /> Sign In</>
+            )}
+          </button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: '16px', color: 'var(--text-muted)' }}>
-          Don't have an account? <Link to="/register" style={{ color: 'var(--primary-color)' }}>Register</Link>
+
+        {/* Security Badge */}
+        <div className="email-domain-hint" style={{ marginTop: '20px' }}>
+          <ShieldCheck size={14} />
+          <span>Restricted to <strong>{ALLOWED_DOMAIN}</strong> college emails only</span>
+        </div>
+
+        {/* Footer Link */}
+        <p className="auth-footer-text">
+          Don't have an account?{' '}
+          <Link to="/register">Create one</Link>
         </p>
       </div>
     </div>
