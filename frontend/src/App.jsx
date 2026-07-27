@@ -10,7 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import GuestRoute from './components/GuestRoute';
 import NotificationBell from './components/NotificationBell';
 import { ToastContainer } from './components/Toast';
-import { getStoredUser, logout, getDashboardPath, isAuthority } from './utils/auth';
+import { getStoredUser, logout, getDashboardPath } from './utils/auth';
 
 /* ── Navbar ─────────────────────────────────────────────── */
 function Navbar() {
@@ -46,8 +46,8 @@ function Navbar() {
         <div className="nav-links">
           {user ? (
             <div className="nav-user-info">
-              {/* Notification Bell — only for authorities */}
-              {isAuthority(user.role) && <NotificationBell />}
+              {/* Notification Bell — for all authenticated users (Students + Authorities) */}
+              <NotificationBell />
 
               {/* Dashboard shortcut */}
               <Link to={getDashboardPath(user.role)} className="btn-ghost" title="Dashboard">

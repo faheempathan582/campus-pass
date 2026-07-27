@@ -3,16 +3,20 @@ const router = express.Router();
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 
-const AUTHORITY_ROLES = ['Advisor', 'HOD', 'Warden', 'Principal'];
-
+/* ── GET /api/notifications — Fetch notifications for logged-in user ── */
 router.get('/', auth, async (req, res) => {
   try {
-    if (!AUTHORITY_ROLES.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Not authorized' });
+    const queryConditions = [];
+
+    if (req.user.id) {
+      queryConditions.push({ recipientUser: req.user.id });
+    }
+    if (req.user.role) {
+      queryConditions.push({ recipientRole: req.user.role });
     }
 
-    const notifications = await Notification.find({ recipientRole: req.user.role })
-      .populate('permission', 'type status fromDate toDate')
+    const notifications = await Notification.find({ $or: queryConditions })
+      .populate('permission', 'type status fromDate toDate student')
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -26,11 +30,17 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+/* ── PUT /api/notifications/:id/read — Mark single notification as read ── */
 router.put('/:id/read', auth, async (req, res) => {
   try {
     const notification = await Notification.findById(req.params.id);
     if (!notification) return res.status(404).json({ message: 'Not found' });
-    if (notification.recipientRole !== req.user.role) {
+
+    const isRecipient =
+      (notification.recipientUser && notification.recipientUser.toString() === req.user.id) ||
+      (notification.recipientRole && notification.recipientRole === req.user.role);
+
+    if (!isRecipient) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
@@ -46,10 +56,15 @@ router.put('/:id/read', auth, async (req, res) => {
   }
 });
 
+/* ── PUT /api/notifications/read-all — Mark all notifications as read ── */
 router.put('/read-all', auth, async (req, res) => {
   try {
+    const queryConditions = [];
+    if (req.user.id) queryConditions.push({ recipientUser: req.user.id });
+    if (req.user.role) queryConditions.push({ recipientRole: req.user.role });
+
     const notifications = await Notification.find({
-      recipientRole: req.user.role,
+      $or: queryConditions,
       readBy: { $ne: req.user.id }
     });
 

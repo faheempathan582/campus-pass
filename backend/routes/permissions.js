@@ -34,8 +34,10 @@ router.post('/', auth, async (req, res) => {
     });
     await permission.save();
 
-    // Notify first authority (Advisor or Warden)
+    // Fetch student info
     const student = await User.findById(req.user.id).select('name rollNumber');
+
+    // Notify authority (Advisor or Warden)
     await Notification.create({
       recipientRole: firstRole,
       message: `📋 New ${type} request from ${student?.name || 'a student'}${
@@ -127,19 +129,38 @@ router.put('/:id/action', auth, async (req, res) => {
       permission.status = 'Rejected';
       permission.pendingWithRole = null;
 
+      // Send Notification to Student that request was Rejected
+      await Notification.create({
+        recipientUser: permission.student,
+        recipientRole: 'Student',
+        message: `❌ Your ${permission.type} request has been Rejected by ${req.user.role}${
+          comment ? `: "${comment}"` : '.'
+        }`,
+        permission: permission._id,
+      });
+
     } else {
       /* ── Approved — determine next step in workflow ── */
       if (req.user.role === 'Advisor') {
         // Advisor → forward to HOD
         permission.pendingWithRole = 'HOD';
 
-        // Notify HOD
         const student = await User.findById(permission.student).select('name rollNumber');
+
+        // 1. Notify HOD
         await Notification.create({
           recipientRole: 'HOD',
           message: `📋 ${permission.type} request from ${student?.name || 'a student'}${
             student?.rollNumber ? ` (${student.rollNumber})` : ''
-          } has been approved by Advisor — awaiting your review.`,
+          } was approved by Advisor — awaiting your review.`,
+          permission: permission._id,
+        });
+
+        // 2. Notify Student that Advisor approved & forwarded to HOD
+        await Notification.create({
+          recipientUser: permission.student,
+          recipientRole: 'Student',
+          message: `ℹ️ Your ${permission.type} request was approved by Class Advisor and forwarded to HOD for final signoff.`,
           permission: permission._id,
         });
 
@@ -147,6 +168,17 @@ router.put('/:id/action', auth, async (req, res) => {
         // HOD / Warden / Principal → fully approved
         permission.status = 'Approved';
         permission.pendingWithRole = null;
+
+        const fromStr = new Date(permission.fromDate).toLocaleDateString('en-IN');
+        const toStr = new Date(permission.toDate).toLocaleDateString('en-IN');
+
+        // Notify Student that request has been Granted & Approved!
+        await Notification.create({
+          recipientUser: permission.student,
+          recipientRole: 'Student',
+          message: `🎉 Great news! Your ${permission.type} request (${fromStr} → ${toStr}) has been Granted & Approved by ${req.user.role}!`,
+          permission: permission._id,
+        });
       }
     }
 

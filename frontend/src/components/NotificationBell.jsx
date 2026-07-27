@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, CheckCheck } from 'lucide-react';
 import { API_URL, getToken } from '../utils/auth';
+import { toastSuccess, toastError, toastInfo } from './Toast';
 
 function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const seenIdsRef = useRef(new Set());
+  const initialLoadRef = useRef(true);
 
   const fetchNotifications = async () => {
     const token = getToken();
@@ -18,8 +21,35 @@ function NotificationBell() {
       });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
+        const list = data.notifications || [];
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        // Check for new unread notifications to trigger on-screen toast popup
+        list.forEach((n) => {
+          const isUnread = !n.readBy?.some((id) => id === user.id || id._id === user.id);
+          
+          if (isUnread && !seenIdsRef.current.has(n._id)) {
+            seenIdsRef.current.add(n._id);
+
+            // Trigger on-screen real-time toast popup (don't popup on very first page load)
+            if (!initialLoadRef.current) {
+              if (n.message.includes('Approved') || n.message.includes('Granted')) {
+                toastSuccess('Permission Granted! 🎉', n.message, 6000);
+              } else if (n.message.includes('Rejected')) {
+                toastError('Permission Update ❌', n.message, 6000);
+              } else {
+                toastInfo('New Campus Alert 🔔', n.message, 6000);
+              }
+            }
+          }
+        });
+
+        if (initialLoadRef.current) {
+          initialLoadRef.current = false;
+        }
+
+        setNotifications(list);
+        setUnreadCount(data.unreadCount || 0);
       }
     } catch {
       /* ignore fetch errors */
@@ -28,7 +58,8 @@ function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    // Poll every 5 seconds for fast real-time live alerts
+    const interval = setInterval(fetchNotifications, 5000);
     return () => clearInterval(interval);
   }, []);
 
