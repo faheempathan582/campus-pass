@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, User, Mail, Lock, Eye, EyeOff, BookOpen, Hash, AlertCircle, ShieldCheck, Home } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, BookOpen, Hash, AlertCircle, ShieldCheck, Home } from 'lucide-react';
 import { isValidCollegeEmail, API_URL, ALLOWED_DOMAIN } from '../utils/auth';
-import { toastSuccess, toastError, toastInfo } from '../components/Toast';
+import { toastSuccess, toastError } from '../components/Toast';
 
 const DEPARTMENTS = [
   'Computer Science & Engineering',
@@ -93,17 +93,19 @@ function Register() {
     <div className="auth-page">
       <div className="auth-card" style={{ maxWidth: '500px' }}>
 
-        {/* Logo */}
-        <div className="auth-logo">
-          <div className="auth-logo-icon">
-            <GraduationCap size={28} color="#fff" strokeWidth={2} />
+        {/* SRIT College Logo & Header */}
+        <div className="auth-srit-header">
+          <div className="auth-logo-box">
+            <img src="/srit-logo.jpg" alt="SRIT College Logo" />
           </div>
+          <div className="auth-college-title">SRIT Autonomous</div>
+          <div className="auth-college-sub">Empowering Knowledge</div>
         </div>
 
         {/* Heading */}
         <div className="auth-heading">
           <h2>Create Account</h2>
-          <p>Join CampusPass with your SRIT college email</p>
+          <p>Join CampusPass with your official SRIT email</p>
         </div>
 
         {/* Form */}

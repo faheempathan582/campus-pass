@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import './App.css';
-import { GraduationCap, LogOut, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { LogOut, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
@@ -31,12 +31,15 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="container nav-content">
-        {/* Brand */}
+        {/* Brand with official SRIT Logo */}
         <Link to={user ? getDashboardPath(user.role) : '/'} className="brand">
-          <div className="brand-icon">
-            <GraduationCap size={20} color="#fff" strokeWidth={2.5} />
+          <div className="brand-logo-container">
+            <img src="/srit-logo.jpg" alt="SRIT Logo" className="brand-logo-img" />
           </div>
-          <h1>CampusPass</h1>
+          <div className="brand-title-wrap">
+            <h1>CampusPass</h1>
+            <span className="brand-subtitle">SRIT AUTONOMOUS</span>
+          </div>
         </Link>
 
         {/* Right Side */}
@@ -91,7 +94,7 @@ function App() {
       <div className="app-container">
         <Navbar />
 
-        <main className="container animate-fade-in" style={{ marginTop: '32px' }}>
+        <main className="container animate-fade-in" style={{ marginTop: '24px' }}>
           <Routes>
             {/* Public Home */}
             <Route path="/" element={<Home />} />
@@ -137,10 +140,15 @@ function Home() {
   const user = getStoredUser();
   return (
     <div className="hero-section">
+      <div className="hero-college-badge">
+        <img src="/srit-logo.jpg" alt="SRIT Logo" />
+        <span>SRIT AUTONOMOUS — Empowering Knowledge</span>
+      </div>
+
       <h2>Digital Permissions,<br />Simplified.</h2>
       <p>
         Apply for leaves, on-duty, and hostel exits — entirely online.
-        No paperwork, no chasing faculty. Just your SRIT email.
+        No paperwork, no chasing faculty. Exclusive for <strong>SRIT College</strong> students and staff.
       </p>
       {user ? (
         <Link to={getDashboardPath(user.role)} className="btn-primary" style={{ fontSize: '1rem', padding: '14px 32px' }}>
@@ -160,7 +168,7 @@ function Home() {
       <div className="hero-cards">
         <div className="hero-feature-card">
           <div className="hero-feature-icon">🎓</div>
-          <h3>For Students</h3>
+          <h3>For SRIT Students</h3>
           <p>Apply for leave, on-duty, medical, or hostel exit permissions from anywhere — no more running after faculty.</p>
         </div>
         <div className="hero-feature-card">

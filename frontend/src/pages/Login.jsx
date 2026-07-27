@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
 import { isValidCollegeEmail, setAuth, API_URL, ALLOWED_DOMAIN } from '../utils/auth';
 import { toastSuccess, toastError } from '../components/Toast';
 
@@ -58,17 +58,19 @@ function Login() {
     <div className="auth-page">
       <div className="auth-card">
 
-        {/* Logo */}
-        <div className="auth-logo">
-          <div className="auth-logo-icon">
-            <GraduationCap size={28} color="#fff" strokeWidth={2} />
+        {/* SRIT College Logo & Header */}
+        <div className="auth-srit-header">
+          <div className="auth-logo-box">
+            <img src="/srit-logo.jpg" alt="SRIT College Logo" />
           </div>
+          <div className="auth-college-title">SRIT Autonomous</div>
+          <div className="auth-college-sub">Empowering Knowledge</div>
         </div>
 
         {/* Heading */}
         <div className="auth-heading">
-          <h2>Welcome Back</h2>
-          <p>Sign in to your CampusPass account</p>
+          <h2>CampusPass Login</h2>
+          <p>Sign in with your official <strong>@srit.ac.in</strong> email</p>
         </div>
 
         {/* Form */}
@@ -149,7 +151,7 @@ function Login() {
             {loading ? (
               <><div className="spinner" /> Signing in…</>
             ) : (
-              <><ShieldCheck size={17} /> Sign In</>
+              <><ShieldCheck size={17} /> Sign In to SRIT Pass</>
             )}
           </button>
         </form>
