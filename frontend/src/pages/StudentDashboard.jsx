@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText, Clock, CheckCircle, XCircle, PlusCircle, X,
-  CalendarDays, AlignLeft, Tag, ChevronRight
+  CalendarDays, AlignLeft, Tag, ChevronRight, ShieldCheck,
+  Building, User, HelpCircle, PhoneCall, Info
 } from 'lucide-react';
 import { API_URL, getToken, getStoredUser } from '../utils/auth';
 import { toastSuccess, toastError } from '../components/Toast';
@@ -116,136 +117,214 @@ function StudentDashboard() {
         </button>
       </div>
 
-      {/* ── Stats ── */}
-      <div className="stats-grid">
-        {[
-          { label: 'Total Requests', value: stats.total,    icon: '📋', color: 'rgba(108,99,255,0.15)' },
-          { label: 'Pending',        value: stats.pending,  icon: '⏳', color: 'rgba(245,158,11,0.15)' },
-          { label: 'Approved',       value: stats.approved, icon: '✅', color: 'rgba(16,185,129,0.15)' },
-          { label: 'Rejected',       value: stats.rejected, icon: '❌', color: 'rgba(244,63,94,0.15)'  },
-        ].map((s) => (
-          <div key={s.label} className="stat-card">
-            <div className="stat-icon" style={{ background: s.color }}>{s.icon}</div>
-            <div className="stat-number">{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+      {/* ── Grid Layout for Widescreen ── */}
+      <div className="dashboard-grid-layout">
+        
+        {/* ── Main Column ── */}
+        <div className="dashboard-main-col">
+
+          {/* Stats Bar */}
+          <div className="stats-grid">
+            {[
+              { label: 'Total Requests', value: stats.total,    icon: '📋', color: 'rgba(243,112,35,0.18)' },
+              { label: 'Pending',        value: stats.pending,  icon: '⏳', color: 'rgba(245,158,11,0.18)' },
+              { label: 'Approved',       value: stats.approved, icon: '✅', color: 'rgba(16,185,129,0.18)' },
+              { label: 'Rejected',       value: stats.rejected, icon: '❌', color: 'rgba(244,63,94,0.18)'  },
+            ].map((s) => (
+              <div key={s.label} className="stat-card">
+                <div className="stat-icon" style={{ background: s.color }}>{s.icon}</div>
+                <div className="stat-number">{s.value}</div>
+                <div className="stat-label">{s.label}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* ── New Request Form ── */}
-      {showForm && (
-        <div className="card animate-fade-in" style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <PlusCircle size={18} color="var(--primary-light)" /> New Permission Request
-          </h3>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {/* New Request Form Drawer */}
+          {showForm && (
+            <div className="card animate-fade-in" style={{ marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PlusCircle size={18} color="var(--primary-light)" /> New Permission Request
+              </h3>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-            {/* Type */}
-            <div className="form-group">
-              <label className="form-label"><Tag size={12} style={{ display: 'inline', marginRight: '5px' }} />Permission Type</label>
-              <select
-                className="form-select"
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                id="perm-type"
-              >
-                <option value="Leave">🏖️ Leave</option>
-                <option value="On-Duty">💼 On-Duty</option>
-                <option value="Hostel Exit">🏠 Hostel Exit</option>
-                <option value="Medical">🏥 Medical Leave</option>
-              </select>
-            </div>
-
-            {/* Date Range */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group">
-                <label className="form-label"><CalendarDays size={12} style={{ display: 'inline', marginRight: '5px' }} />From Date</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  required
-                  value={form.fromDate}
-                  onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
-                  id="perm-from"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label"><CalendarDays size={12} style={{ display: 'inline', marginRight: '5px' }} />To Date</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  required
-                  value={form.toDate}
-                  onChange={(e) => setForm({ ...form, toDate: e.target.value })}
-                  id="perm-to"
-                />
-              </div>
-            </div>
-
-            {/* Reason */}
-            <div className="form-group">
-              <label className="form-label"><AlignLeft size={12} style={{ display: 'inline', marginRight: '5px' }} />Reason</label>
-              <textarea
-                className="form-textarea"
-                required
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                placeholder="Briefly explain the reason for your request…"
-                id="perm-reason"
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button type="submit" className="btn-primary" disabled={submitting} id="perm-submit">
-                {submitting ? <><div className="spinner" /> Submitting…</> : <><ChevronRight size={16} /> Submit Request</>}
-              </button>
-              <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* ── History ── */}
-      <p className="section-heading"><FileText size={14} /> My Request History</p>
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-          <div className="spinner" style={{ margin: '0 auto 12px', borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
-          Loading your requests…
-        </div>
-      ) : requests.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📋</div>
-          <h3>No requests yet</h3>
-          <p>Hit "Apply for Permission" above to get started.</p>
-        </div>
-      ) : (
-        <div className="request-list">
-          {requests.map((req) => (
-            <div key={req._id} className="request-card">
-              <div className="request-card-info">
-                <h4>
-                  <span style={{ marginRight: '8px' }}>{TYPE_ICONS[req.type] || '📄'}</span>
-                  {req.type}
-                </h4>
-                <div className="meta">
-                  <span>📅 {new Date(req.fromDate).toLocaleDateString('en-IN')} → {new Date(req.toDate).toLocaleDateString('en-IN')}</span>
-                  <span>🕐 {new Date(req.createdAt).toLocaleDateString('en-IN')}</span>
+                {/* Type */}
+                <div className="form-group">
+                  <label className="form-label"><Tag size={12} style={{ display: 'inline', marginRight: '5px' }} />Permission Type</label>
+                  <select
+                    className="form-select"
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    id="perm-type"
+                  >
+                    <option value="Leave">🏖️ Leave</option>
+                    <option value="On-Duty">💼 On-Duty</option>
+                    <option value="Hostel Exit">🏠 Hostel Exit</option>
+                    <option value="Medical">🏥 Medical Leave</option>
+                  </select>
                 </div>
-                <p className="reason">"{req.reason}"</p>
+
+                {/* Date Range */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group">
+                    <label className="form-label"><CalendarDays size={12} style={{ display: 'inline', marginRight: '5px' }} />From Date</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      required
+                      value={form.fromDate}
+                      onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
+                      id="perm-from"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label"><CalendarDays size={12} style={{ display: 'inline', marginRight: '5px' }} />To Date</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      required
+                      value={form.toDate}
+                      onChange={(e) => setForm({ ...form, toDate: e.target.value })}
+                      id="perm-to"
+                    />
+                  </div>
+                </div>
+
+                {/* Reason */}
+                <div className="form-group">
+                  <label className="form-label"><AlignLeft size={12} style={{ display: 'inline', marginRight: '5px' }} />Reason</label>
+                  <textarea
+                    className="form-textarea"
+                    required
+                    value={form.reason}
+                    onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                    placeholder="Briefly explain the reason for your request…"
+                    id="perm-reason"
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="submit" className="btn-primary" disabled={submitting} id="perm-submit">
+                    {submitting ? <><div className="spinner" /> Submitting…</> : <><ChevronRight size={16} /> Submit Request</>}
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* History Section */}
+          <div className="card">
+            <p className="section-heading"><FileText size={14} /> My Request History</p>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                <div className="spinner" style={{ margin: '0 auto 12px', borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
+                Loading your requests…
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <StatusBadge status={req.status} />
-                {req.status === 'Pending' && req.pendingWithRole && (
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                    With <strong>{req.pendingWithRole}</strong>
-                  </p>
-                )}
+            ) : requests.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">📋</div>
+                <h3>No requests yet</h3>
+                <p>Hit "Apply for Permission" above to get started.</p>
+              </div>
+            ) : (
+              <div className="request-list">
+                {requests.map((req) => (
+                  <div key={req._id} className="request-card">
+                    <div className="request-card-info">
+                      <h4>
+                        <span style={{ marginRight: '8px' }}>{TYPE_ICONS[req.type] || '📄'}</span>
+                        {req.type}
+                      </h4>
+                      <div className="meta">
+                        <span>📅 {new Date(req.fromDate).toLocaleDateString('en-IN')} → {new Date(req.toDate).toLocaleDateString('en-IN')}</span>
+                        <span>🕐 {new Date(req.createdAt).toLocaleDateString('en-IN')}</span>
+                      </div>
+                      <p className="reason">"{req.reason}"</p>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <StatusBadge status={req.status} />
+                      {req.status === 'Pending' && req.pendingWithRole && (
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                          With <strong>{req.pendingWithRole}</strong>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Side Column (Fills Right Side Widescreen Space) ── */}
+        <div className="dashboard-side-col">
+          
+          {/* SRIT Student Profile ID Card */}
+          <div className="side-card srit-id-card">
+            <div className="srit-id-logo">
+              <img src="/srit-logo.jpg" alt="SRIT College Logo" />
+            </div>
+            <div className="srit-id-name">{user?.name || 'SRIT Student'}</div>
+            <div className="srit-id-role">SRIT Autonomous Student</div>
+            
+            <div className="srit-id-details">
+              <div className="srit-id-row">
+                <span>Roll No:</span>
+                <span>{user?.rollNumber || 'N/A'}</span>
+              </div>
+              <div className="srit-id-row">
+                <span>Department:</span>
+                <span>{user?.department || 'Engineering'}</span>
+              </div>
+              <div className="srit-id-row">
+                <span>Email Domain:</span>
+                <span style={{ color: 'var(--primary-light)' }}>@srit.ac.in</span>
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* Campus Pass Guidelines */}
+          <div className="side-card">
+            <div className="side-card-header">
+              <ShieldCheck size={18} color="var(--primary)" />
+              <div className="side-card-title">Pass Guidelines</div>
+              <span className="side-card-badge">SRIT Rules</span>
+            </div>
+
+            <div className="guideline-list">
+              <div className="guideline-item">
+                <div className="guideline-icon">1</div>
+                <div>Apply for leave <strong>at least 24 hours in advance</strong> for faster Advisor review.</div>
+              </div>
+              <div className="guideline-item">
+                <div className="guideline-icon">2</div>
+                <div><strong>Hostel Exit Passes</strong> require approval from your Hostel Warden.</div>
+              </div>
+              <div className="guideline-item">
+                <div className="guideline-icon">3</div>
+                <div>Instant notification alerts are sent to your Advisor & HOD automatically.</div>
+              </div>
+            </div>
+          </div>
+
+          {/* College Support Card */}
+          <div className="side-card">
+            <div className="side-card-header">
+              <HelpCircle size={18} color="var(--primary)" />
+              <div className="side-card-title">College Helpdesk</div>
+            </div>
+            <p style={{ fontSize: '0.83rem', color: 'var(--text-sub)', lineHeight: 1.5, marginBottom: '10px' }}>
+              For urgent permissions or technical support, contact the Dean of Student Affairs or IT Cell.
+            </p>
+            <div style={{ fontSize: '0.8rem', color: 'var(--primary-light)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <PhoneCall size={13} /> SRIT Office: +91 (08554) 288888
+            </div>
+          </div>
+
         </div>
-      )}
+
+      </div>
     </div>
   );
 }
